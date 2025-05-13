@@ -37,10 +37,10 @@
 
 
     <div class="controls">
-        <label for="lowerBound">Lower Bound (for values in Column 2 'Team'):</label>
+        <label for="lowerBound">Lower Bound:</label>
         <input type="number" id="lowerBound" placeholder="e.g., 1">
 
-        <label for="upperBound">Upper Bound (for values in Column 2 'Team'):</label>
+        <label for="upperBound">Upper Bound:</label>
         <input type="number" id="upperBound" placeholder="e.g., 10">
 
         <button id="openRangeInstagramButton">Open Instagram Links in Range</button>
@@ -69,7 +69,7 @@
                 
                 makeLinksClickable();
                 setupEventListeners(); 
-                setStatusMessage('Excel file loaded and table displayed. Range filtering is fixed to Column 2 (Team).', false, 'success');
+                setStatusMessage('Excel file loaded and table displayed.', false, 'success');
 
             } catch (error) {
                 console.error('Error loading Excel file:', error);
