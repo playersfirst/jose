@@ -35,18 +35,12 @@
 <body>
     <h1>Player Data</h1>
 
-    <div class="controls">
-        <button id="openAllInstagramButton">Open All Instagram Links</button>
-    </div>
 
     <div class="controls">
-        <label for="rangeColumnIndex">Column for Range (0-indexed):</label>
-        <input type="number" id="rangeColumnIndex" value="0" title="Enter the column index (e.g., 0 for the first column like 'Rank') to use for range filtering.">
-
-        <label for="lowerBound">Lower Bound:</label>
+        <label for="lowerBound">Lower Bound (for values in Column 2 'Team'):</label>
         <input type="number" id="lowerBound" placeholder="e.g., 1">
 
-        <label for="upperBound">Upper Bound:</label>
+        <label for="upperBound">Upper Bound (for values in Column 2 'Team'):</label>
         <input type="number" id="upperBound" placeholder="e.g., 10">
 
         <button id="openRangeInstagramButton">Open Instagram Links in Range</button>
@@ -75,7 +69,7 @@
                 
                 makeLinksClickable();
                 setupEventListeners(); 
-                setStatusMessage('Excel file loaded and table displayed.', false, 'success');
+                setStatusMessage('Excel file loaded and table displayed. Range filtering is fixed to Column 2 (Team).', false, 'success');
 
             } catch (error) {
                 console.error('Error loading Excel file:', error);
@@ -89,7 +83,7 @@
             const cells = document.querySelectorAll('#tableContainer td');
             cells.forEach(cell => {
                 const text = cell.textContent.trim();
-                const urlPattern = /^(https?):\/\/[^\s/$.?#].[^\s]*$/i; // Matches if the entire cell content is a URL
+                const urlPattern = /^(https?):\/\/[^\s/$.?#].[^\s]*$/i;
                 if (urlPattern.test(text)) {
                     cell.innerHTML = `<a href="${text}" target="_blank" rel="noopener noreferrer">${text}</a>`;
                 }
@@ -99,7 +93,7 @@
         function setStatusMessage(message, isError = false, type = 'info') {
             const statusElement = document.getElementById('statusMessage');
             statusElement.textContent = message;
-            statusElement.className = ''; // Clear existing classes
+            statusElement.className = ''; 
             if (isError) {
                 statusElement.classList.add('status-error');
             } else if (type === 'success') {
@@ -124,9 +118,8 @@
                     const newTab = window.open(link, '_blank');
                     if (!newTab || newTab.closed || typeof newTab.closed == 'undefined') {
                         console.warn(`Pop-up likely blocked for: ${link}. Ensure pop-ups are allowed for this site.`);
-                        // It's hard to give specific feedback for each blocked tab here due to browser restrictions
                     }
-                }, index * 300); // 300ms delay between opening each tab
+                }, index * 300); 
             });
         }
 
@@ -145,18 +138,13 @@
 
         // Function to open Instagram links within a specified range
         function openInstagramInRange() {
-            const columnIndexInput = document.getElementById('rangeColumnIndex');
             const lowerBoundInput = document.getElementById('lowerBound');
             const upperBoundInput = document.getElementById('upperBound');
             
-            const columnIndex = parseInt(columnIndexInput.value, 10);
+            const columnIndex = 2; // Hardcoded to column index 2 (Team column)
             const lowerBound = parseFloat(lowerBoundInput.value);
             const upperBound = parseFloat(upperBoundInput.value);
 
-            if (isNaN(columnIndex) || columnIndex < 0) {
-                setStatusMessage('Invalid column index. Please enter a non-negative number.', true, 'error');
-                return;
-            }
             if (lowerBoundInput.value === '' || upperBoundInput.value === '' || isNaN(lowerBound) || isNaN(upperBound)) {
                 setStatusMessage('Lower and Upper bounds must be valid numbers.', true, 'error');
                 return;
@@ -166,7 +154,7 @@
                 return;
             }
 
-            setStatusMessage(`Scanning for Instagram links in range (Column ${columnIndex}: ${lowerBound}-${upperBound})...`, false, 'info');
+            setStatusMessage(`Scanning for Instagram links based on Column ${columnIndex + 1} ('Team') content matching numerical bounds ${lowerBound}-${upperBound}. Note: This may not yield results if 'Team' names are not numerical.`, false, 'info');
             const linksToOpen = [];
             const tableElement = document.querySelector('#tableContainer table');
             if (!tableElement) {
@@ -175,18 +163,20 @@
             }
             const rows = tableElement.querySelectorAll('tr'); 
 
-            if (rows.length <= 1) { // Only header or no data
+            if (rows.length <= 1) { 
                 setStatusMessage('No data rows found in the table.', false, 'info');
                 return;
             }
 
-            for (let i = 1; i < rows.length; i++) { // Start from index 1 to skip the header row
+            for (let i = 1; i < rows.length; i++) { 
                 const row = rows[i];
                 const cells = row.querySelectorAll('td');
                 if (cells.length > columnIndex) {
                     const cellValueText = cells[columnIndex].textContent.trim();
-                    const cellValue = parseFloat(cellValueText);
+                    // Attempt to convert cell text to a number for comparison
+                    const cellValue = parseFloat(cellValueText); 
 
+                    // Check if the converted cellValue is a number and falls within the bounds
                     if (!isNaN(cellValue) && cellValue >= lowerBound && cellValue <= upperBound) {
                         const anchorTagsInRow = row.querySelectorAll('td a');
                         anchorTagsInRow.forEach(a => {
@@ -198,6 +188,9 @@
                 }
             }
             openLinksInNewTabs(linksToOpen);
+             if (linksToOpen.length === 0) {
+                setStatusMessage(`No Instagram links found. Column 2 ('Team') values like "${rows.length > 1 ? rows[1].querySelectorAll('td')[columnIndex]?.textContent.trim() : 'Sample Team'}" might not be matching the numerical bounds ${lowerBound}-${upperBound}.`, false, 'info');
+            }
         }
 
         // Setup event listeners for buttons
