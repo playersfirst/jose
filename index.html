@@ -109,38 +109,14 @@
         return;
     }
 
-    setStatusMessage(`Found ${linksToOpen.length} Instagram link(s). Starting to open...`, false, 'info');
+    setStatusMessage(`Attempting to open ${linksToOpen.length} Instagram link(s) in new tabs. Please ensure your browser is not blocking pop-ups for this page. If tabs don't open, check your browser's pop-up blocker settings and allow pop-ups from this site.`, false, 'info');
+    alert(`Attempting to open ${linksToOpen.length} link(s) in new tabs. Please ensure your browser is not blocking pop-ups for this page. If tabs don't open, check your browser's pop-up blocker settings and allow pop-ups from this site.`);
 
-    let openedCount = 0;
-    const openNextTab = () => {
-        if (openedCount < linksToOpen.length) {
-            const link = linksToOpen[openedCount];
-            const newTab = window.open(link, '_blank');
-            if (!newTab || newTab.closed || typeof newTab.closed == 'undefined') {
-                console.warn(`Pop-up likely blocked for: ${link}. Ensure pop-ups are allowed for this site.`);
-                setStatusMessage(`Pop-up blocked for: ${link}. Please check your browser settings.`, true, 'error');
-            } else {
-                setStatusMessage(`Opened ${openedCount + 1} of ${linksToOpen.length} links.`, false, 'success');
-            }
-            openedCount++;
+    linksToOpen.forEach(link => {
+        window.open(link, '_blank');
+    });
 
-            // Optionally, add a small delay before prompting to open the next
-            setTimeout(() => {
-                if (openedCount < linksToOpen.length) {
-                    if (confirm(`Do you want to open the next Instagram link? (${openedCount + 1} of ${linksToOpen.length})`)) {
-                        openNextTab();
-                    } else {
-                        setStatusMessage('User cancelled opening remaining links.', false, 'info');
-                    }
-                } else {
-                    setStatusMessage('Finished attempting to open all Instagram links.', false, 'success');
-                }
-            }, 500); // Adjust delay as needed
-        }
-    };
-
-    // Start the process
-    openNextTab();
+    setStatusMessage(`Attempted to open ${linksToOpen.length} links. Check your browser for new tabs.`, false, 'success');
 }
 
         // Function to open all Instagram links
