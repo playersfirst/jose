@@ -4,6 +4,7 @@
     <title>Excel File Display</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
         table {
             border-collapse: collapse;
             width: 100%;
@@ -20,50 +21,204 @@
         tr:nth-child(even) {
             background-color: #f9f9f9;
         }
+        .controls { margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; padding: 10px; border: 1px solid #eee; border-radius: 5px; background-color: #f9f9f9;}
+        .controls label { margin-right: 5px;}
+        .controls input[type="number"] { width: 120px; padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+        .controls button { padding: 10px 15px; cursor: pointer; background-color: #007bff; color: white; border: none; border-radius: 4px; font-size: 14px; }
+        .controls button:hover { background-color: #0056b3; }
+        #statusMessage { margin-top: 15px; padding: 10px; border-radius: 4px; font-weight: bold;}
+        .status-error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb;}
+        .status-success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb;}
+        .status-info { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb;}
     </style>
 </head>
 <body>
+    <h1>Player Data</h1>
+
+    <div class="controls">
+        <button id="openAllInstagramButton">Open All Instagram Links</button>
+    </div>
+
+    <div class="controls">
+        <label for="rangeColumnIndex">Column for Range (0-indexed):</label>
+        <input type="number" id="rangeColumnIndex" value="0" title="Enter the column index (e.g., 0 for the first column like 'Rank') to use for range filtering.">
+
+        <label for="lowerBound">Lower Bound:</label>
+        <input type="number" id="lowerBound" placeholder="e.g., 1">
+
+        <label for="upperBound">Upper Bound:</label>
+        <input type="number" id="upperBound" placeholder="e.g., 10">
+
+        <button id="openRangeInstagramButton">Open Instagram Links in Range</button>
+    </div>
+
+    <div id="statusMessage"></div>
     <div id="tableContainer"></div>
 
     <script>
         // Function to fetch and parse Excel file
         async function loadExcelFile() {
+            setStatusMessage('Loading Excel file...', false, 'info');
             try {
                 const response = await fetch('https://playersfirst.github.io/jose_new.xlsx');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
                 const arrayBuffer = await response.arrayBuffer();
                 const data = new Uint8Array(arrayBuffer);
                 const workbook = XLSX.read(data, { type: 'array' });
                 
-                // Get first sheet
                 const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const htmlTable = XLSX.utils.sheet_to_html(firstSheet); 
                 
-                // Convert to HTML table
-                const htmlTable = XLSX.utils.sheet_to_html(firstSheet, { editable: false });
-                
-                // Display the table
                 document.getElementById('tableContainer').innerHTML = htmlTable;
                 
-                // Convert URLs to clickable links
                 makeLinksClickable();
+                setupEventListeners(); 
+                setStatusMessage('Excel file loaded and table displayed.', false, 'success');
+
             } catch (error) {
                 console.error('Error loading Excel file:', error);
-                document.getElementById('tableContainer').innerHTML = 'Error loading Excel file';
+                document.getElementById('tableContainer').innerHTML = `Error loading Excel file: ${error.message}`;
+                setStatusMessage(`Error loading Excel file: ${error.message}`, true, 'error');
             }
         }
 
-        // Function to convert URLs to clickable links
+        // Function to convert URLs in table cells to clickable links
         function makeLinksClickable() {
-            const cells = document.querySelectorAll('td');
+            const cells = document.querySelectorAll('#tableContainer td');
             cells.forEach(cell => {
                 const text = cell.textContent.trim();
-                if (text.match(/^(http|https):\/\//i)) {
-                    cell.innerHTML = `<a href="${text}" target="_blank">${text}</a>`;
+                const urlPattern = /^(https?):\/\/[^\s/$.?#].[^\s]*$/i; // Matches if the entire cell content is a URL
+                if (urlPattern.test(text)) {
+                    cell.innerHTML = `<a href="${text}" target="_blank" rel="noopener noreferrer">${text}</a>`;
                 }
             });
+        }
+
+        function setStatusMessage(message, isError = false, type = 'info') {
+            const statusElement = document.getElementById('statusMessage');
+            statusElement.textContent = message;
+            statusElement.className = ''; // Clear existing classes
+            if (isError) {
+                statusElement.classList.add('status-error');
+            } else if (type === 'success') {
+                statusElement.classList.add('status-success');
+            } else {
+                statusElement.classList.add('status-info');
+            }
+        }
+
+        function openLinksInNewTabs(linksToOpen) {
+            if (linksToOpen.length === 0) {
+                setStatusMessage('No Instagram links found matching your criteria.', false, 'info');
+                return;
+            }
+
+            setStatusMessage(`Found ${linksToOpen.length} Instagram link(s). Attempting to open...`, false, 'info');
+            
+            alert(`Attempting to open ${linksToOpen.length} link(s) in new tabs. Please ensure your browser is not blocking pop-ups for this page. If tabs don't open, check your browser's pop-up blocker settings and allow pop-ups from this site.`);
+
+            linksToOpen.forEach((link, index) => {
+                setTimeout(() => {
+                    const newTab = window.open(link, '_blank');
+                    if (!newTab || newTab.closed || typeof newTab.closed == 'undefined') {
+                        console.warn(`Pop-up likely blocked for: ${link}. Ensure pop-ups are allowed for this site.`);
+                        // It's hard to give specific feedback for each blocked tab here due to browser restrictions
+                    }
+                }, index * 300); // 300ms delay between opening each tab
+            });
+        }
+
+        // Function to open all Instagram links
+        function openAllInstagram() {
+            setStatusMessage('Scanning for all Instagram links...', false, 'info');
+            const linksToOpen = [];
+            const anchorTags = document.querySelectorAll('#tableContainer td a');
+            anchorTags.forEach(a => {
+                if (a.href && a.href.toLowerCase().includes('instagram.com')) {
+                    linksToOpen.push(a.href);
+                }
+            });
+            openLinksInNewTabs(linksToOpen);
+        }
+
+        // Function to open Instagram links within a specified range
+        function openInstagramInRange() {
+            const columnIndexInput = document.getElementById('rangeColumnIndex');
+            const lowerBoundInput = document.getElementById('lowerBound');
+            const upperBoundInput = document.getElementById('upperBound');
+            
+            const columnIndex = parseInt(columnIndexInput.value, 10);
+            const lowerBound = parseFloat(lowerBoundInput.value);
+            const upperBound = parseFloat(upperBoundInput.value);
+
+            if (isNaN(columnIndex) || columnIndex < 0) {
+                setStatusMessage('Invalid column index. Please enter a non-negative number.', true, 'error');
+                return;
+            }
+            if (lowerBoundInput.value === '' || upperBoundInput.value === '' || isNaN(lowerBound) || isNaN(upperBound)) {
+                setStatusMessage('Lower and Upper bounds must be valid numbers.', true, 'error');
+                return;
+            }
+            if (lowerBound > upperBound) {
+                setStatusMessage('Lower bound cannot be greater than Upper bound.', true, 'error');
+                return;
+            }
+
+            setStatusMessage(`Scanning for Instagram links in range (Column ${columnIndex}: ${lowerBound}-${upperBound})...`, false, 'info');
+            const linksToOpen = [];
+            const tableElement = document.querySelector('#tableContainer table');
+            if (!tableElement) {
+                setStatusMessage('Table data not found.', true, 'error');
+                return;
+            }
+            const rows = tableElement.querySelectorAll('tr'); 
+
+            if (rows.length <= 1) { // Only header or no data
+                setStatusMessage('No data rows found in the table.', false, 'info');
+                return;
+            }
+
+            for (let i = 1; i < rows.length; i++) { // Start from index 1 to skip the header row
+                const row = rows[i];
+                const cells = row.querySelectorAll('td');
+                if (cells.length > columnIndex) {
+                    const cellValueText = cells[columnIndex].textContent.trim();
+                    const cellValue = parseFloat(cellValueText);
+
+                    if (!isNaN(cellValue) && cellValue >= lowerBound && cellValue <= upperBound) {
+                        const anchorTagsInRow = row.querySelectorAll('td a');
+                        anchorTagsInRow.forEach(a => {
+                            if (a.href && a.href.toLowerCase().includes('instagram.com')) {
+                                linksToOpen.push(a.href);
+                            }
+                        });
+                    }
+                }
+            }
+            openLinksInNewTabs(linksToOpen);
+        }
+
+        // Setup event listeners for buttons
+        function setupEventListeners() {
+            const openAllButton = document.getElementById('openAllInstagramButton');
+            if (openAllButton) {
+                openAllButton.addEventListener('click', openAllInstagram);
+            } else {
+                console.error("Button with ID 'openAllInstagramButton' not found.");
+            }
+
+            const openRangeButton = document.getElementById('openRangeInstagramButton');
+            if (openRangeButton) {
+                openRangeButton.addEventListener('click', openInstagramInRange);
+            } else {
+                console.error("Button with ID 'openRangeInstagramButton' not found.");
+            }
         }
 
         // Load the Excel file when the page loads
         window.onload = loadExcelFile;
     </script>
 </body>
-</html> 
+</html>
