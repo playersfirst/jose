@@ -43,7 +43,7 @@
         <label for="upperBound">Upper Bound:</label>
         <input type="number" id="upperBound" placeholder="e.g., 10">
 
-        <button id="openRangeInstagramButton">Open Instagram Links in Range</button>
+        <button id="openRangeInstagramButton">Open Instagram</button>
     </div>
 
     <div id="statusMessage"></div>
@@ -104,24 +104,44 @@
         }
 
         function openLinksInNewTabs(linksToOpen) {
-            if (linksToOpen.length === 0) {
-                setStatusMessage('No Instagram links found matching your criteria.', false, 'info');
-                return;
+    if (linksToOpen.length === 0) {
+        setStatusMessage('No Instagram links found matching your criteria.', false, 'info');
+        return;
+    }
+
+    setStatusMessage(`Found ${linksToOpen.length} Instagram link(s). Starting to open...`, false, 'info');
+
+    let openedCount = 0;
+    const openNextTab = () => {
+        if (openedCount < linksToOpen.length) {
+            const link = linksToOpen[openedCount];
+            const newTab = window.open(link, '_blank');
+            if (!newTab || newTab.closed || typeof newTab.closed == 'undefined') {
+                console.warn(`Pop-up likely blocked for: ${link}. Ensure pop-ups are allowed for this site.`);
+                setStatusMessage(`Pop-up blocked for: ${link}. Please check your browser settings.`, true, 'error');
+            } else {
+                setStatusMessage(`Opened ${openedCount + 1} of ${linksToOpen.length} links.`, false, 'success');
             }
+            openedCount++;
 
-            setStatusMessage(`Found ${linksToOpen.length} Instagram link(s). Attempting to open...`, false, 'info');
-            
-            alert(`Attempting to open ${linksToOpen.length} link(s) in new tabs. Please ensure your browser is not blocking pop-ups for this page. If tabs don't open, check your browser's pop-up blocker settings and allow pop-ups from this site.`);
-
-            linksToOpen.forEach((link, index) => {
-                setTimeout(() => {
-                    const newTab = window.open(link, '_blank');
-                    if (!newTab || newTab.closed || typeof newTab.closed == 'undefined') {
-                        console.warn(`Pop-up likely blocked for: ${link}. Ensure pop-ups are allowed for this site.`);
+            // Optionally, add a small delay before prompting to open the next
+            setTimeout(() => {
+                if (openedCount < linksToOpen.length) {
+                    if (confirm(`Do you want to open the next Instagram link? (${openedCount + 1} of ${linksToOpen.length})`)) {
+                        openNextTab();
+                    } else {
+                        setStatusMessage('User cancelled opening remaining links.', false, 'info');
                     }
-                }, index * 300); 
-            });
+                } else {
+                    setStatusMessage('Finished attempting to open all Instagram links.', false, 'success');
+                }
+            }, 500); // Adjust delay as needed
         }
+    };
+
+    // Start the process
+    openNextTab();
+}
 
         // Function to open all Instagram links
         function openAllInstagram() {
